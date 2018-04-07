@@ -74,9 +74,13 @@ func addStruct(opts DecoderOpts, typ reflect.Type, namePfx string, idxPfx, cap [
 		if tag[0] != "" {
 			shortname = tag[0]
 		}
-		for i := 1; i < len(tag); i++ {
-			if tag[i] == "required" {
+		for _, opt := range tag[1:] {
+			switch opt {
+			case "required":
 				required = true
+			case "", "omitempty":
+			default:
+				panic(fmt.Sprintf("unknown tag option %q on field %q", opt, field.Name))
 			}
 		}
 

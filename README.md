@@ -27,6 +27,7 @@ field, including empty string) tag field with `form:"…,required"`.
     case this array/map doesn't have values of slice/array type
 - error on decoding no values to non-pointer/slice/array field tagged
   `",required"`
+- panic on unknown `form:""` tag option
 
 ## Benchmark
 

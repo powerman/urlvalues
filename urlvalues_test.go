@@ -18,6 +18,28 @@ func TestUsage(tt *testing.T) {
 	t.PanicMatch(func() { d.Unmarshal(url.Values{}, &i) }, `^v .* struct`)
 }
 
+func TestBadTagForm(tt *testing.T) {
+	t := check.T(tt)
+	var v1 struct {
+		S string `form:",wrong"`
+	}
+	var v2 struct {
+		S string `form:"s,omitempty,required,wrong"`
+	}
+	d := NewStrictDecoder(NewDecoderOpts())
+	t.PanicMatch(func() { d.Unmarshal(url.Values{}, &v1) }, `"wrong" .* "S"`)
+	t.PanicMatch(func() { d.Unmarshal(url.Values{"s": {""}}, &v2) }, `"wrong" .* "S"`)
+}
+
+func TestBadTagValidate(tt *testing.T) {
+	t := check.T(tt)
+	var data struct {
+		S string `validate:"wrong"`
+	}
+	d := NewStrictDecoder(NewDecoderOpts())
+	t.PanicMatch(func() { d.Unmarshal(url.Values{}, &data) }, `'wrong' .* 'S'`)
+}
+
 func TestEmpty(tt *testing.T) {
 	t := check.T(tt)
 	var v1 struct{}
@@ -184,7 +206,7 @@ func TestMultipleNames(tt *testing.T) {
 func TestRequired(tt *testing.T) {
 	t := check.T(tt)
 	var data struct {
-		I int    `form:"i,required"`
+		I int    `form:"i,omitempty,required"`
 		S string `form:",required"`
 	}
 	d := NewStrictDecoder(NewDecoderOpts())
