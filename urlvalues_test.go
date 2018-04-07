@@ -31,15 +31,6 @@ func TestBadTagForm(tt *testing.T) {
 	t.PanicMatch(func() { d.Unmarshal(url.Values{"s": {""}}, &v2) }, `"wrong" .* "S"`)
 }
 
-func TestBadTagValidate(tt *testing.T) {
-	t := check.T(tt)
-	var data struct {
-		S string `validate:"wrong"`
-	}
-	d := NewStrictDecoder(false, NewDecoderOpts())
-	t.PanicMatch(func() { d.Unmarshal(url.Values{}, &data) }, `'wrong' .* 'S'`)
-}
-
 func TestEmpty(tt *testing.T) {
 	t := check.T(tt)
 	var v1 struct{}
@@ -53,15 +44,15 @@ func TestEmpty(tt *testing.T) {
 func TestSmoke(tt *testing.T) {
 	t := check.T(tt)
 	var v = struct {
-		S string `form:"s" validate:"eq=good"`
-	}{S: "neutral"}
+		I int `form:"i"`
+	}{I: 42}
 	d := NewStrictDecoder(false, NewDecoderOpts())
-	t.DeepEqual(d.Unmarshal(url.Values{"s": {"bad"}}, &v), Errs{url.Values{
-		"S": {"failed validation: eq=good"},
+	t.DeepEqual(d.Unmarshal(url.Values{"i": {"bad"}}, &v), Errs{url.Values{
+		"i": {"wrong type"},
 	}})
-	t.Equal(v.S, "bad")
-	t.Nil(d.Unmarshal(url.Values{"s": {"good"}}, &v))
-	t.Equal(v.S, "good")
+	t.Equal(v.I, 42)
+	t.Nil(d.Unmarshal(url.Values{"i": {"10"}}, &v))
+	t.Equal(v.I, 10)
 }
 
 func TestIndexOutOfBounds(tt *testing.T) {
@@ -308,9 +299,6 @@ func BenchmarkSmallSuccessLoose(b *testing.B) {
 		}) {
 			b.FailNow()
 		}
-		if nil != d.validate.Struct(&data) {
-			b.FailNow()
-		}
 	}
 }
 
@@ -392,9 +380,6 @@ func BenchmarkLargeSuccessLoose(b *testing.B) {
 			"C":             {"datac.c", "c"},
 			"DataC.Z":       {"datac.z"},
 		}) {
-			b.FailNow()
-		}
-		if nil != d.validate.Struct(&data) {
 			b.FailNow()
 		}
 	}

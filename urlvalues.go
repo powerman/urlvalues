@@ -1,11 +1,7 @@
-// Package urlvalues implements unmarshaling url.Values to struct with
-// strict validation.
+// Package urlvalues implements strict decoding of url.Values to given
+// struct.
 //
 //  WARNING: This package is experimental, API will change!
-//
-// In case of successful strict validation url.Values will be
-// decoded to given struct using https://github.com/go-playground/form and
-// validated using https://github.com/go-playground/validator.
 //
 // To make field required (meaning url.Values must contain any value for this
 // field, including empty string) tag field with:
@@ -23,19 +19,16 @@ import (
 	"time"
 
 	"github.com/go-playground/form"
-	validator "gopkg.in/go-playground/validator.v9"
 )
 
 var typTime = reflect.TypeOf(time.Time{})
 
-// Errs contain all errors from one of failed steps: strict validation of
-// url.Values, decoding url.Values to struct, validating struct data.
+// Errs contain all errors from either strict validation of url.Values or
+// decoding url.Values to struct.
 //
-// Key is either pattern for related url.Values key (pattern is same as
-// key with map keys replaced with [key] and array/slice indices replaced
-// with [idx]) or struct field name.
-//
-// TODO More normalization, ideally use only pattern.
+// Key is pattern for related url.Values key (pattern is same as key with
+// map keys replaced with [key] and array/slice indices replaced with
+// [idx]).
 type Errs struct{ url.Values }
 
 func newErrs() Errs { return Errs{Values: make(url.Values)} }
@@ -61,12 +54,11 @@ func NewDecoderOpts() DecoderOpts {
 }
 
 // StrictDecoder adds strict validation of url.Values before decoding
-// url.Values to struct and validating struct data.
+// url.Values to struct.
 type StrictDecoder struct {
 	ignoreUnknown bool
 	decoder       *form.Decoder
 	decoderOpts   DecoderOpts
-	validate      *validator.Validate
 }
 
 // NewStrictDecoder returns new StrictDecoder.
@@ -81,7 +73,6 @@ func NewStrictDecoder(ignoreUnknown bool, decoderOpts DecoderOpts) *StrictDecode
 		ignoreUnknown: ignoreUnknown,
 		decoder:       form.NewDecoder(),
 		decoderOpts:   decoderOpts,
-		validate:      validator.New(),
 	}
 	d.decoder.SetMaxArraySize(uint(decoderOpts.MaxArraySize))
 	d.decoder.SetMode(decoderOpts.Mode)
@@ -89,9 +80,9 @@ func NewStrictDecoder(ignoreUnknown bool, decoderOpts DecoderOpts) *StrictDecode
 	return d
 }
 
-// Unmarshal will do strict validation of url.Values, decoding url.Values
-// to struct, and validating struct data. It'll also normalize panics and
-// decoder/validator errors and return either usual error (in case error
+// Unmarshal will do strict validation of url.Values and decode url.Values
+// to struct. It'll also normalize panics and
+// decoder errors and return either usual error (in case error
 // is not related to any of existing struct field) or Errs.
 //
 // NOTE: Do not support field/array/slice/map of interface type.
@@ -131,27 +122,6 @@ func (d *StrictDecoder) Unmarshal(values url.Values, v interface{}) (err error) 
 			panic(err) // never here (should be handled by panics above)
 		default:
 			return err // unmatched brackets in param name
-		}
-	}
-
-	err = d.validate.Struct(v)
-	if err != nil {
-		switch err := err.(type) {
-		case validator.ValidationErrors:
-			errs := newErrs()
-			for _, fe := range err {
-				param := fe.Param()
-				if param != "" {
-					param = "=" + param
-				}
-				errs.Add(fe.Namespace(),
-					fmt.Sprintf("failed validation: %s%s", fe.Tag(), param))
-			}
-			return errs
-		case *validator.InvalidValidationError:
-			panic(err) // never here (should be handled by panics above)
-		default:
-			return err // never here (in current validator version)
 		}
 	}
 
