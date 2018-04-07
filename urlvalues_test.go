@@ -11,7 +11,7 @@ func TestUsage(tt *testing.T) {
 	t := check.T(tt)
 	var v struct{}
 	var i int
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	t.PanicMatch(func() { d.Unmarshal(nil, &v) }, `^data .* nil`)
 	t.PanicMatch(func() { d.Unmarshal(url.Values{}, nil) }, `^v .* non-nil`)
 	t.PanicMatch(func() { d.Unmarshal(url.Values{}, v) }, `^v .* pointer`)
@@ -26,7 +26,7 @@ func TestBadTagForm(tt *testing.T) {
 	var v2 struct {
 		S string `form:"s,omitempty,required,wrong"`
 	}
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	t.PanicMatch(func() { d.Unmarshal(url.Values{}, &v1) }, `"wrong" .* "S"`)
 	t.PanicMatch(func() { d.Unmarshal(url.Values{"s": {""}}, &v2) }, `"wrong" .* "S"`)
 }
@@ -36,7 +36,7 @@ func TestBadTagValidate(tt *testing.T) {
 	var data struct {
 		S string `validate:"wrong"`
 	}
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	t.PanicMatch(func() { d.Unmarshal(url.Values{}, &data) }, `'wrong' .* 'S'`)
 }
 
@@ -44,7 +44,7 @@ func TestEmpty(tt *testing.T) {
 	t := check.T(tt)
 	var v1 struct{}
 	var v2 struct{ S string }
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	t.Nil(d.Unmarshal(url.Values{}, &v1))
 	t.Nil(d.Unmarshal(url.Values{}, &v2))
 	t.Zero(v2)
@@ -55,7 +55,7 @@ func TestSmoke(tt *testing.T) {
 	var v = struct {
 		S string `form:"s" validate:"eq=good"`
 	}{S: "neutral"}
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	t.DeepEqual(d.Unmarshal(url.Values{"s": {"bad"}}, &v), Errs{url.Values{
 		"S": {"failed validation: eq=good"},
 	}})
@@ -74,7 +74,7 @@ func TestIndexOutOfBounds(tt *testing.T) {
 		SSI  [][]int
 		ASAI [10][][2]int
 	}
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	t.Nil(d.Unmarshal(url.Values{
 		// "AI[1]":            {"42"},
 		// "AF[0].I":          {"42"},
@@ -125,7 +125,7 @@ func TestMultipleValues(tt *testing.T) {
 		MI  map[string]int
 		MSI map[string][]int
 	}
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	t.Nil(d.Unmarshal(url.Values{
 		"S1":      {"10", "20"},
 		"S2[0]":   {"10"},
@@ -158,7 +158,7 @@ func TestTooManyValues(tt *testing.T) {
 		SAI *[]*[2]int
 		AI  [2]int
 	}
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	t.Nil(d.Unmarshal(url.Values{
 	// "SAI[42]": {"10", "20"},
 	// "AI": {"10", "20"},
@@ -182,7 +182,7 @@ func TestMultipleNames(tt *testing.T) {
 		SI []int
 		Embed
 	}
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	t.Nil(d.Unmarshal(url.Values{
 		"SI": {"10", "20"},
 		"I":  {"42"},
@@ -209,7 +209,7 @@ func TestRequired(tt *testing.T) {
 		I int    `form:"i,omitempty,required"`
 		S string `form:",required"`
 	}
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	t.Nil(d.Unmarshal(url.Values{
 		"i": {"0"},
 		"S": {""},
@@ -229,7 +229,14 @@ func TestUnknown(tt *testing.T) {
 			I int
 		}
 	}
-	d := NewStrictDecoder(NewDecoderOpts())
+
+	d := NewStrictDecoder(false, NewDecoderOpts())
+	t.DeepEqual(d.Unmarshal(url.Values{
+		"A": {"one"},
+		"S": {"one", "two"},
+	}, &data), Errs{url.Values{
+		"S": {"multiple values"},
+	}})
 	t.Match(d.Unmarshal(url.Values{
 		"A": {"one"},
 	}, &data), `unknown name: "A"`)
@@ -239,6 +246,11 @@ func TestUnknown(tt *testing.T) {
 	t.Match(d.Unmarshal(url.Values{
 		"F": {"42"},
 	}, &data), `unknown name: "F"`)
+
+	d = NewStrictDecoder(true, NewDecoderOpts())
+	t.Nil(d.Unmarshal(url.Values{
+		"F": {"42"},
+	}, &data))
 }
 
 func BenchmarkSmallFailure(b *testing.B) {
@@ -247,7 +259,7 @@ func BenchmarkSmallFailure(b *testing.B) {
 		LName string `form:",required"`
 		Age   uint   `validate:"max=130"`
 	}
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	d.Unmarshal(url.Values{}, &data)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -265,7 +277,7 @@ func BenchmarkSmallSuccess(b *testing.B) {
 		LName string `form:",required"`
 		Age   uint   `validate:"max=130"`
 	}
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	d.Unmarshal(url.Values{}, &data)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -285,7 +297,7 @@ func BenchmarkSmallSuccessLoose(b *testing.B) {
 		LName string `form:",required"`
 		Age   uint   `validate:"max=130"`
 	}
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	d.Unmarshal(url.Values{}, &data)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -304,7 +316,7 @@ func BenchmarkSmallSuccessLoose(b *testing.B) {
 
 func BenchmarkLargeFailure(b *testing.B) {
 	var data DataA
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	d.Unmarshal(url.Values{}, &data)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -331,7 +343,7 @@ func BenchmarkLargeFailure(b *testing.B) {
 
 func BenchmarkLargeSuccess(b *testing.B) {
 	var data DataA
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	d.Unmarshal(url.Values{}, &data)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -359,7 +371,7 @@ func BenchmarkLargeSuccess(b *testing.B) {
 
 func BenchmarkLargeSuccessLoose(b *testing.B) {
 	var data DataA
-	d := NewStrictDecoder(NewDecoderOpts())
+	d := NewStrictDecoder(false, NewDecoderOpts())
 	d.Unmarshal(url.Values{}, &data)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

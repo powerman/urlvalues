@@ -63,20 +63,25 @@ func NewDecoderOpts() DecoderOpts {
 // StrictDecoder adds strict validation of url.Values before decoding
 // url.Values to struct and validating struct data.
 type StrictDecoder struct {
-	decoder     *form.Decoder
-	decoderOpts DecoderOpts
-	validate    *validator.Validate
+	ignoreUnknown bool
+	decoder       *form.Decoder
+	decoderOpts   DecoderOpts
+	validate      *validator.Validate
 }
 
 // NewStrictDecoder returns new StrictDecoder.
 //
+// If ignoreUnknown is true then Unmarshal will ignore unknown keys in
+// url.Values.
+//
 // It's recommended to create one instance (for each decoderOpts) and keep
 // it to enable caching.
-func NewStrictDecoder(decoderOpts DecoderOpts) *StrictDecoder {
+func NewStrictDecoder(ignoreUnknown bool, decoderOpts DecoderOpts) *StrictDecoder {
 	d := &StrictDecoder{
-		decoder:     form.NewDecoder(),
-		decoderOpts: decoderOpts,
-		validate:    validator.New(),
+		ignoreUnknown: ignoreUnknown,
+		decoder:       form.NewDecoder(),
+		decoderOpts:   decoderOpts,
+		validate:      validator.New(),
 	}
 	d.decoder.SetMaxArraySize(uint(decoderOpts.MaxArraySize))
 	d.decoder.SetMode(decoderOpts.Mode)
@@ -245,13 +250,16 @@ func (d *StrictDecoder) strict(typ reflect.Type, values url.Values) error { //no
 		}
 	}
 
-	for name := range valuesCount {
-		return fmt.Errorf("unknown name: %q", name)
-	}
-
 	if len(errs.Values) > 0 {
 		return errs
 	}
+
+	if !d.ignoreUnknown {
+		for name := range valuesCount {
+			return fmt.Errorf("unknown name: %q", name)
+		}
+	}
+
 	return nil
 }
 
