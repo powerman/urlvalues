@@ -1,11 +1,26 @@
 // Package urlvalues implements strict decoding of url.Values to given
 // struct.
 //
-//  WARNING: This package is experimental, API will change!
+//	WARNING: This package is experimental, API will change!
 //
-// To make field required (meaning url.Values must contain any value for this
-// field, including empty string) tag field with:
-//   `form:"…,required"`
+// It is safe for concurrent use by multiple goroutines.
+//
+// Strict validation rules
+//
+//	- (optional) error on unknown param
+//	  - including param matching real, but not qualified enough field name:
+//	    - struct without .field (TODO in case custom handler not registered)
+//	    - map without [key]
+//	- error on array overflow
+//	    - array with out-of-bound [index]
+//	    - too many params for array field
+//	- error on scalar overflow
+//	  - multiple values for non-slice/array field (except []byte)
+//	  - multiple values for same `array[index]` or `map[key]` (in case this
+//	    array/map doesn't have values of slice/array type)
+//	- error on no values for non-pointer/slice/array field tagged
+//	  `form:"…,required"`
+//	- panic on unknown `form:""` tag option
 package urlvalues
 
 import (
@@ -21,72 +36,110 @@ import (
 	"github.com/go-playground/form"
 )
 
-var typTime = reflect.TypeOf(time.Time{})
-
-// Errs contain all errors from either strict validation of url.Values or
-// decoding url.Values to struct.
+// Errs contain Decode errors.
 //
-// Key is pattern for related url.Values key (pattern is same as key with
-// map keys replaced with [key] and array/slice indices replaced with
-// [idx]).
+// Errs key can be "-" or pattern for corresponding Decode param values key.
+//
+// Key "-" will contain all keys from Decode param values which are not
+// correspond to any of Decode param v field and thus can't be decoded.
+// This key won't exists if IgnoreUnknown option is used.
+//
+// Pattern is same as values key with map key names replaced with [key] and
+// array/slice indices replaced with [idx].
+// Example: if Decode was called with this key in values
+//	FieldA.MapField[something].SliceOfSliceField[42][1].FieldB
+// then related key in Errs will be
+//	FieldA.MapField[key].SliceOfSliceField[idx][idx].FieldB
 type Errs struct{ url.Values }
 
 func newErrs() Errs { return Errs{Values: make(url.Values)} }
 
-// Error will return url.Values.Encode suitable for debugging but not for
-// production error message.
+// Error return all errors at once using errs.Encode.
+//
+// This is suitable for debugging but not for production error message.
 func (errs Errs) Error() string { return errs.Encode() }
 
-// DecoderOpts contain options for github.com/go-playground/form.Decoder.
-type DecoderOpts struct {
-	MaxArraySize int
-	Mode         form.Mode
-	TagName      string
-}
-
-// NewDecoderOpts return DecoderOpts with default values.
-func NewDecoderOpts() DecoderOpts {
-	return DecoderOpts{
-		MaxArraySize: 10000,
-		Mode:         form.ModeImplicit,
-		TagName:      "form",
-	}
-}
-
-// StrictDecoder adds strict validation of url.Values before decoding
-// url.Values to struct.
+// StrictDecoder wraps https://godoc.org/github.com/go-playground/form#Decoder
+// to add strict validation of url.Values and normalize returned errors.
+//
+// Differences from wrapped form.Decoder:
+//	- Decoding to field with interface type is not supported.
+//	- To make field required (meaning url.Values must contain any value for
+//	  this field, including empty string) tag field with:
+//		`form:"…,required"`
 type StrictDecoder struct {
-	ignoreUnknown bool
 	decoder       *form.Decoder
-	decoderOpts   DecoderOpts
+	decoderOpts   decoderOpts
+	ignoreUnknown bool
 }
+
+// StrictDecoderOption is for internal use only and exported just to make
+// golint happy.
+type StrictDecoderOption func(*StrictDecoder)
 
 // NewStrictDecoder returns new StrictDecoder.
 //
-// If ignoreUnknown is true then Unmarshal will ignore unknown keys in
-// url.Values.
-//
-// It's recommended to create one instance (for each decoderOpts) and keep
-// it to enable caching.
-func NewStrictDecoder(ignoreUnknown bool, decoderOpts DecoderOpts) *StrictDecoder {
-	d := &StrictDecoder{
-		ignoreUnknown: ignoreUnknown,
-		decoder:       form.NewDecoder(),
-		decoderOpts:   decoderOpts,
+// It's recommended to create one instance (for each opts) and reuse it to
+// enable caching.
+func NewStrictDecoder(opts ...StrictDecoderOption) *StrictDecoder {
+	d := &StrictDecoder{decoder: form.NewDecoder()}
+	defaults := newDecoderOpts()
+	MaxArraySize(defaults.maxArraySize)(d)
+	Mode(defaults.mode)(d)
+	TagName(defaults.tagName)(d)
+	for _, opt := range opts {
+		opt(d)
 	}
-	d.decoder.SetMaxArraySize(uint(decoderOpts.MaxArraySize))
-	d.decoder.SetMode(decoderOpts.Mode)
-	d.decoder.SetTagName(decoderOpts.TagName)
 	return d
 }
 
-// Unmarshal will do strict validation of url.Values and decode url.Values
-// to struct. It'll also normalize panics and
-// decoder errors and return either usual error (in case error
-// is not related to any of existing struct field) or Errs.
+// MaxArraySize return an option for NewStrictDecoder.
 //
-// NOTE: Do not support field/array/slice/map of interface type.
-func (d *StrictDecoder) Unmarshal(values url.Values, v interface{}) (err error) { //nolint:gocyclo
+// See https://godoc.org/github.com/go-playground/form#Decoder.SetMaxArraySize
+func MaxArraySize(size uint) StrictDecoderOption {
+	return StrictDecoderOption(func(d *StrictDecoder) {
+		d.decoderOpts.maxArraySize = size
+		d.decoder.SetMaxArraySize(size)
+	})
+}
+
+// Mode return an option for NewStrictDecoder.
+//
+// See https://godoc.org/github.com/go-playground/form#Decoder.SetMode
+func Mode(mode form.Mode) StrictDecoderOption {
+	return StrictDecoderOption(func(d *StrictDecoder) {
+		d.decoderOpts.mode = mode
+		d.decoder.SetMode(mode)
+	})
+}
+
+// TagName return an option for NewStrictDecoder.
+//
+// See https://godoc.org/github.com/go-playground/form#Decoder.SetTagName
+func TagName(tagName string) StrictDecoderOption {
+	return StrictDecoderOption(func(d *StrictDecoder) {
+		d.decoderOpts.tagName = tagName
+		d.decoder.SetTagName(tagName)
+	})
+}
+
+// IgnoreUnknown return an option for NewStrictDecoder.
+//
+// With this option Decode won't return errors related to unknown keys in
+// url.Values.
+func IgnoreUnknown() StrictDecoderOption {
+	return StrictDecoderOption(func(d *StrictDecoder) {
+		d.ignoreUnknown = true
+	})
+}
+
+var typTime = reflect.TypeOf(time.Time{})
+
+// Decode will decode values to v (which must be a pointer to a struct).
+//
+// It'll normalize form.Decoder panics and errors and return nil or Errs.
+// It will panic if called with wrong v, but never panics on wrong values.
+func (d *StrictDecoder) Decode(v interface{}, values url.Values) error { //nolint:gocyclo
 	if values == nil {
 		panic("data must not be nil")
 	}
@@ -95,49 +148,59 @@ func (d *StrictDecoder) Unmarshal(values url.Values, v interface{}) (err error) 
 		panic("v must be a non-nil pointer to a struct")
 	}
 
-	err = d.strict(val.Elem().Type(), values)
-	if err != nil {
-		return err
-	}
-
-	err = d.decode(v, values)
-	if err != nil {
-		switch err := err.(type) {
-		case form.DecodeErrors:
-			errs := newErrs()
-			for field, err := range err {
-				msg := err.Error()
-				if strings.Contains(msg, "Map Key") {
-					panic(err)
-				} else if strings.Contains(msg, "SetMaxArraySize") {
-					panic(err)
-				} else if strings.Contains(msg, "Array index") {
-					errs.Add(field, "wrong index")
-				} else {
-					errs.Add(field, "wrong type")
-				}
-			}
-			return errs
-		case *form.InvalidDecoderError:
-			panic(err) // never here (should be handled by panics above)
-		default:
-			return err // unmatched brackets in param name
+	errs := d.validate(val.Elem().Type(), values)
+	if d.ignoreUnknown && len(errs.Values) == 1 && errs.Values["-"] != nil {
+		// Hide unknown keys from form.Decoder to avoid panic on unmatched brackets.
+		orig := values
+		values = make(url.Values)
+		for key, value := range orig {
+			values[key] = value
 		}
+		for _, key := range errs.Values["-"] {
+			delete(values, key)
+		}
+		delete(errs.Values, "-")
+	}
+	if len(errs.Values) > 0 {
+		return errs
 	}
 
-	return nil
+	err := d.decode(v, values)
+	switch err := err.(type) {
+	case nil:
+		return nil
+	case form.DecodeErrors:
+		for field, err := range err {
+			msg := err.Error()
+			if strings.Contains(msg, "Map Key") {
+				panic(err) // wrong v
+			} else if strings.Contains(msg, "SetMaxArraySize") {
+				panic(err) // wrong v or MaxArraySize
+			} else if strings.Contains(msg, "Array index") {
+				panic(err) // never here (should be handled by validate)
+			} else {
+				errs.Add(field, "wrong type")
+			}
+		}
+		return errs
+	case *form.InvalidDecoderError:
+		panic(err) // never here (wrong v, should be handled by panics above)
+	default:
+		panic(err) // never here (unmatched brackets in param name, should be handled by validate)
+	}
 }
 
 func (d *StrictDecoder) decode(v interface{}, values url.Values) (err error) {
 	defer func() {
 		if msg := recover(); msg != nil {
-			err = fmt.Errorf("%v", msg)
+			err = fmt.Errorf("%v", msg) // unmatched brackets in param name
 		}
 	}()
 	return d.decoder.Decode(v, values)
 }
 
-func (d *StrictDecoder) strict(typ reflect.Type, values url.Values) error { //nolint:gocyclo
+func (d *StrictDecoder) validate(typ reflect.Type, values url.Values) Errs { //nolint:gocyclo
+	errs := newErrs()
 	params := paramsForStruct(d.decoderOpts, typ)
 
 	// Copy values to be able to delete already processed.
@@ -151,8 +214,6 @@ func (d *StrictDecoder) strict(typ reflect.Type, values url.Values) error { //no
 		required   bool   // used to detect missing values
 	}
 	lvalue := make(map[string]*lvalueState, len(params))
-
-	errs := newErrs()
 
 	for pattern, c := range params {
 		if lvalue[c.alias] == nil {
@@ -220,17 +281,11 @@ func (d *StrictDecoder) strict(typ reflect.Type, values url.Values) error { //no
 		}
 	}
 
-	if len(errs.Values) > 0 {
-		return errs
+	for name := range valuesCount {
+		errs.Add("-", name)
 	}
 
-	if !d.ignoreUnknown {
-		for name := range valuesCount {
-			return fmt.Errorf("unknown name: %q", name)
-		}
-	}
-
-	return nil
+	return errs
 }
 
 var (

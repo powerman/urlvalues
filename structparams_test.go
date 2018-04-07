@@ -12,7 +12,7 @@ import (
 func TestParamsEmpty(tt *testing.T) {
 	t := check.T(tt)
 	var data struct{}
-	t.DeepEqual(paramsForStruct(NewDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{})
+	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{})
 }
 
 func TestParamsExported(tt *testing.T) {
@@ -21,7 +21,7 @@ func TestParamsExported(tt *testing.T) {
 		I int
 		a string
 	}
-	t.DeepEqual(paramsForStruct(NewDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
+	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
 		"I": &constraint{alias: "I"},
 	})
 	t.Nil(form.NewDecoder().Decode(&data, url.Values{
@@ -42,14 +42,14 @@ func TestParamsModeExplicit(tt *testing.T) {
 		Y string `form:""`
 		Z string `form:","`
 	}
-	opts := NewDecoderOpts()
-	opts.Mode = form.ModeExplicit
+	opts := newDecoderOpts()
+	opts.mode = form.ModeExplicit
 	t.DeepEqual(paramsForStruct(opts, reflect.TypeOf(data)), map[string]*constraint{
 		"b": &constraint{alias: "b"},
 		"Z": &constraint{alias: "Z"},
 	})
 	decoder := form.NewDecoder()
-	decoder.SetMode(opts.Mode)
+	decoder.SetMode(opts.mode)
 	t.Nil(decoder.Decode(&data, url.Values{
 		"b": {"true"},
 		"I": {"42"},
@@ -72,7 +72,7 @@ func TestParamsIgnored(tt *testing.T) {
 		I int
 		A string `form:"-"`
 	}
-	t.DeepEqual(paramsForStruct(NewDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
+	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
 		"I": &constraint{alias: "I"},
 	})
 }
@@ -83,7 +83,7 @@ func TestParamsAlias(tt *testing.T) {
 		I int
 		A string `form:"a"`
 	}
-	t.DeepEqual(paramsForStruct(NewDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
+	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
 		"I": &constraint{alias: "I"},
 		"a": &constraint{alias: "a"},
 	})
@@ -95,7 +95,7 @@ func TestParamsRequired(tt *testing.T) {
 		I int
 		A string `form:",required"`
 	}
-	t.DeepEqual(paramsForStruct(NewDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
+	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
 		"I": &constraint{alias: "I"},
 		"A": &constraint{alias: "A", required: true},
 	})
@@ -109,7 +109,7 @@ func TestParamsList(tt *testing.T) {
 		B2 []byte
 		S  []int
 	}
-	t.DeepEqual(paramsForStruct(NewDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
+	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
 		"A":       &constraint{alias: "A", list: true, cap: []int{3}},
 		"A[idx]":  &constraint{alias: "A", list: true, cap: []int{3}},
 		"B1":      &constraint{alias: "B1", list: true, cap: []int{5}},
@@ -130,7 +130,7 @@ func TestParamsPtr(tt *testing.T) {
 		SS *[]*int
 		Z  **string
 	}
-	t.DeepEqual(paramsForStruct(NewDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
+	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
 		"A":       &constraint{alias: "A", list: true, cap: []int{3}},
 		"A[idx]":  &constraint{alias: "A", list: true, cap: []int{3}},
 		"I":       &constraint{alias: "I"},
@@ -181,7 +181,7 @@ func TestParamsNoChanFuncInterface(tt *testing.T) {
 	data.A = &a
 	data.I = &i
 	data.F = &f
-	t.DeepEqual(paramsForStruct(NewDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{})
+	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{})
 	t.Nil(form.NewDecoder().Decode(&data, url.Values{
 		"Chan": {"42"},
 		"Func": {"arg"},
@@ -229,7 +229,7 @@ type (
 func TestParamsComplex(tt *testing.T) {
 	t := check.T(tt)
 	var data DataA
-	t.DeepEqual(paramsForStruct(NewDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
+	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
 		"A":                         &constraint{alias: "A"},
 		"Y.I":                       &constraint{alias: "Y.I"},
 		"Y.S":                       &constraint{alias: "Y.S"},

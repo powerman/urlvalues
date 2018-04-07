@@ -9,6 +9,22 @@ import (
 	"github.com/go-playground/form"
 )
 
+// decoderOpts contain options for form.Decoder.
+type decoderOpts struct {
+	maxArraySize uint
+	mode         form.Mode
+	tagName      string
+}
+
+// newDecoderOpts return decoderOpts with default values.
+func newDecoderOpts() decoderOpts {
+	return decoderOpts{
+		maxArraySize: 10000,
+		mode:         form.ModeImplicit,
+		tagName:      "form",
+	}
+}
+
 // constraint describe properties of url.Values key corresponding to some value
 // in target data structure.
 type constraint struct {
@@ -20,12 +36,12 @@ type constraint struct {
 
 var (
 	paramsCacheMu sync.Mutex
-	paramsCache   = make(map[DecoderOpts]map[reflect.Type]map[string]*constraint)
+	paramsCache   = make(map[decoderOpts]map[reflect.Type]map[string]*constraint)
 )
 
 // paramsForStruct introspect given structure and return list of all
 // url.Values keys corresponding to this structure and their constraints.
-func paramsForStruct(opts DecoderOpts, typ reflect.Type) (params map[string]*constraint) {
+func paramsForStruct(opts decoderOpts, typ reflect.Type) (params map[string]*constraint) {
 	paramsCacheMu.Lock()
 	if paramsCache[opts] == nil {
 		paramsCache[opts] = make(map[reflect.Type]map[string]*constraint)
@@ -50,7 +66,7 @@ func paramsForStruct(opts DecoderOpts, typ reflect.Type) (params map[string]*con
 // addStruct add given structure's fields to params.
 //
 // Parameters namePfx, idxPfx and byIndex are used internally for recursion only.
-func addStruct(opts DecoderOpts, typ reflect.Type, namePfx string, idxPfx, cap []int, byIndex, params map[string]*constraint) {
+func addStruct(opts decoderOpts, typ reflect.Type, namePfx string, idxPfx, cap []int, byIndex, params map[string]*constraint) { // nolint:gocyclo
 	seen := make(map[string]bool, typ.NumField())
 	typ.FieldByNameFunc(func(shortname string) bool {
 		if seen[shortname] { // we'll handle recursion to anon field manually
@@ -64,8 +80,8 @@ func addStruct(opts DecoderOpts, typ reflect.Type, namePfx string, idxPfx, cap [
 		}
 
 		var required bool
-		tag := strings.Split(field.Tag.Get(opts.TagName), ",")
-		if opts.Mode == form.ModeExplicit && len(tag) == 1 && tag[0] == "" {
+		tag := strings.Split(field.Tag.Get(opts.tagName), ",")
+		if opts.mode == form.ModeExplicit && len(tag) == 1 && tag[0] == "" {
 			return false
 		}
 		if tag[0] == "-" {
@@ -95,7 +111,7 @@ func addStruct(opts DecoderOpts, typ reflect.Type, namePfx string, idxPfx, cap [
 // addElem add single value of any supported type to params.
 //
 // Parameters name, index and byIndex are used internally for recursion only.
-func addElem(opts DecoderOpts, typ reflect.Type, required bool, name string, index, cap []int, byIndex, params map[string]*constraint) { //nolint:gocyclo
+func addElem(opts decoderOpts, typ reflect.Type, required bool, name string, index, cap []int, byIndex, params map[string]*constraint) { //nolint:gocyclo
 	for typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
 	}
@@ -116,7 +132,7 @@ func addElem(opts DecoderOpts, typ reflect.Type, required bool, name string, ind
 		if typ.Kind() == reflect.Array {
 			cap = append(cap, typ.Len())
 		} else if typ.Elem().Kind() != reflect.Uint8 { // exclude []byte
-			cap = append(cap, opts.MaxArraySize)
+			cap = append(cap, int(opts.maxArraySize))
 		}
 		if complexElem(typ) {
 			name += "[idx]"
