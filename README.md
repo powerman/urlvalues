@@ -1,12 +1,8 @@
 # urlvalues [![GoDoc](https://godoc.org/github.com/powerman/urlvalues?status.svg)](http://godoc.org/github.com/powerman/urlvalues) [![Go Report Card](https://goreportcard.com/badge/github.com/powerman/urlvalues)](https://goreportcard.com/report/github.com/powerman/urlvalues) [![CircleCI](https://circleci.com/gh/powerman/urlvalues.svg?style=svg)](https://circleci.com/gh/powerman/urlvalues) [![Coverage Status](https://coveralls.io/repos/github/powerman/urlvalues/badge.svg?branch=master)](https://coveralls.io/github/powerman/urlvalues?branch=master)
 
-Go package for unmarshaling url.Values to struct with strict validation.
+Go package for strict decoding of url.Values to given struct.
 
 **WARNING:** This package is experimental, API will change!
-
-In case of successful strict validation url.Values will be
-decoded to given struct using https://github.com/go-playground/form and
-validated using https://github.com/go-playground/validator.
 
 To make field required (meaning url.Values must contain any value for this
 field, including empty string) tag field with `form:"…,required"`.
@@ -33,15 +29,15 @@ field, including empty string) tag field with `form:"…,required"`.
 
 - `Small`/`Large` means size of struct.
 - `Failure` means failed strict validation and skipped
-  `form.Decoder.Decode()` and `validator.Validate.Struct()`.
+  `form.Decoder.Decode()`.
 - `Loose` means without strict validation, i.e. just
-  `form.Decoder.Decode()` and `validator.Validate.Struct()`.
+  `form.Decoder.Decode()`.
 
 ```
-BenchmarkSmallFailure      	 1000000	      1262 ns/op	     944 B/op	      10 allocs/op
-BenchmarkSmallSuccess      	 1000000	      1961 ns/op	     592 B/op	       9 allocs/op
-BenchmarkSmallSuccessLoose 	 2000000	       809 ns/op	     448 B/op	       5 allocs/op
-BenchmarkLargeFailure      	   30000	     44528 ns/op	    7851 B/op	     260 allocs/op
-BenchmarkLargeSuccess      	   10000	    474760 ns/op	  820307 B/op	     308 allocs/op
-BenchmarkLargeSuccessLoose 	   10000	    416117 ns/op	  814421 B/op	      51 allocs/op
+BenchmarkSmallFailure      	 1000000	      1212 ns/op	     944 B/op	      10 allocs/op
+BenchmarkSmallSuccess      	 1000000	      1535 ns/op	     592 B/op	       9 allocs/op
+BenchmarkSmallSuccessLoose 	 3000000	       519 ns/op	     448 B/op	       5 allocs/op
+BenchmarkLargeFailure      	   50000	     33816 ns/op	    5556 B/op	      45 allocs/op
+BenchmarkLargeSuccess      	   10000	    424874 ns/op	  817796 B/op	      77 allocs/op
+BenchmarkLargeSuccessLoose 	   10000	    378008 ns/op	  814315 B/op	      50 allocs/op
 ```
