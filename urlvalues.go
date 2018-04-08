@@ -149,15 +149,17 @@ func (d *StrictDecoder) Decode(v interface{}, values url.Values) error { //nolin
 	}
 
 	errs := d.validate(val.Elem().Type(), values)
-	if d.ignoreUnknown && len(errs.Values) == 1 && errs.Values["-"] != nil {
-		// Hide unknown keys from form.Decoder to avoid panic on unmatched brackets.
-		orig := values
-		values = make(url.Values)
-		for key, value := range orig {
-			values[key] = value
-		}
-		for _, key := range errs.Values["-"] {
-			delete(values, key)
+	if d.ignoreUnknown && errs.Values["-"] != nil {
+		if len(errs.Values) == 1 {
+			// Hide unknown keys from form.Decoder to avoid panic on unmatched brackets.
+			orig := values
+			values = make(url.Values)
+			for key, value := range orig {
+				values[key] = value
+			}
+			for _, key := range errs.Values["-"] {
+				delete(values, key)
+			}
 		}
 		delete(errs.Values, "-")
 	}
