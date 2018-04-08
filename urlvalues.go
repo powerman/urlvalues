@@ -280,7 +280,10 @@ func (d *StrictDecoder) validate(typ reflect.Type, values url.Values) Errs { //n
 			if lvalue[c.alias].firstAlias == "" {
 				lvalue[c.alias].firstAlias = pattern
 			} else if lvalue[c.alias].firstAlias != pattern {
-				errs.Add(c.alias, "multiple names for same value")
+				first := lvalue[c.alias].firstAlias
+				if first+"[idx]" != pattern && first != pattern+"[idx]" {
+					errs.Add(c.alias, "multiple names for same value")
+				}
 			}
 		}
 	}

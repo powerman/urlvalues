@@ -169,6 +169,7 @@ func TestMultipleNames(tt *testing.T) {
 	t := check.T(tt)
 	type Embed struct {
 		I int
+		S []int
 	}
 	var data struct {
 		AI [3]int
@@ -180,25 +181,33 @@ func TestMultipleNames(tt *testing.T) {
 		"AI": {"10", "20"},
 		"SI": {"10", "20"},
 		"I":  {"42"},
+		"S":  {"100", "200"},
 	}))
 	t.Nil(d.Decode(&data, url.Values{
-		"AI[0]":   {"10"},
-		"AI[2]":   {"30"},
-		"SI[0]":   {"10"},
-		"SI[1]":   {"20"},
-		"Embed.I": {"42"},
+		"AI[0]":      {"10"},
+		"AI[2]":      {"30"},
+		"SI[0]":      {"10"},
+		"SI[1]":      {"20"},
+		"Embed.I":    {"42"},
+		"Embed.S[3]": {"400"},
+	}))
+	t.Nil(d.Decode(&data, url.Values{
+		"AI":         {"10"},
+		"AI[2]":      {"30"},
+		"SI":         {"10"},
+		"SI[1]":      {"20"},
+		"I":          {"42"},
+		"Embed.S":    {"100", "200"},
+		"Embed.S[3]": {"400"},
 	}))
 	t.DeepEqual(d.Decode(&data, url.Values{
-		"AI":      {"10"},
-		"AI[1]":   {"20"},
-		"SI":      {"10"},
-		"SI[1]":   {"20"},
-		"I":       {"30"},
-		"Embed.I": {"40"},
+		"I":          {"10"},
+		"Embed.I":    {"20"},
+		"S":          {"100", "200"},
+		"Embed.S[3]": {"400"},
 	}), Errs{url.Values{
-		"AI": {"multiple names for same value"},
-		"SI": {"multiple names for same value"},
-		"I":  {"multiple names for same value"},
+		"I": {"multiple names for same value"},
+		"S": {"multiple names for same value"},
 	}})
 }
 
