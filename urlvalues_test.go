@@ -171,25 +171,32 @@ func TestMultipleNames(tt *testing.T) {
 		I int
 	}
 	var data struct {
+		AI [3]int
 		SI []int
 		Embed
 	}
 	d := NewStrictDecoder()
 	t.Nil(d.Decode(&data, url.Values{
+		"AI": {"10", "20"},
 		"SI": {"10", "20"},
 		"I":  {"42"},
 	}))
 	t.Nil(d.Decode(&data, url.Values{
+		"AI[0]":   {"10"},
+		"AI[2]":   {"30"},
 		"SI[0]":   {"10"},
 		"SI[1]":   {"20"},
 		"Embed.I": {"42"},
 	}))
 	t.DeepEqual(d.Decode(&data, url.Values{
+		"AI":      {"10"},
+		"AI[1]":   {"20"},
 		"SI":      {"10"},
 		"SI[1]":   {"20"},
 		"I":       {"30"},
 		"Embed.I": {"40"},
 	}), Errs{url.Values{
+		"AI": {"multiple names for same value"},
 		"SI": {"multiple names for same value"},
 		"I":  {"multiple names for same value"},
 	}})
