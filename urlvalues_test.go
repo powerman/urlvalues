@@ -255,6 +255,38 @@ func TestUnknown(tt *testing.T) {
 	}))
 }
 
+func TestPartial(tt *testing.T) {
+	t := check.T(tt)
+	type Part struct {
+		I int
+	}
+	type Data struct {
+		First Part `form:"-"`
+		I     int
+		last  Part
+	}
+	v := Data{First: Part{I: 10}, I: 20, last: Part{I: 30}}
+	d := NewStrictDecoder()
+
+	t.Nil(d.Decode(&v.First, url.Values{"I": {"100"}}))
+	t.DeepEqual(v, Data{First: Part{I: 100}, I: 20, last: Part{I: 30}})
+
+	errs := d.Decode(&v, url.Values{
+		"First.I": {"199"},
+		"I":       {"200"},
+		"last.I":  {"399"},
+	})
+	sort.Strings(errs.(Errs).Values["-"])
+	t.DeepEqual(errs, Errs{url.Values{
+		"-": {"First.I", "last.I"},
+	}})
+	t.Nil(d.Decode(&v, url.Values{"I": {"200"}}))
+	t.DeepEqual(v, Data{First: Part{I: 100}, I: 200, last: Part{I: 30}})
+
+	t.Nil(d.Decode(&v.last, url.Values{"I": {"300"}}))
+	t.DeepEqual(v, Data{First: Part{I: 100}, I: 200, last: Part{I: 300}})
+}
+
 func BenchmarkSmallFailure(b *testing.B) {
 	var data struct {
 		FName string `form:",required"`
