@@ -68,14 +68,14 @@ func TestIndexOutOfBounds(tt *testing.T) {
 	}
 	d := NewStrictDecoder()
 	t.Nil(d.Decode(&data, url.Values{
-		// "AI[1]":            {"42"},
-		// "AF[0].I":          {"42"},
-		"SI[9999]":        {"42"},
-		"SF[0000].I":      {"42"},
-		"SSI[9999][9999]": {"42"},
-		"SSI[0][0]":       {"42"},
-		// "ASAI[9][9999][1]": {"42"},
-		// "ASAI[0][0][0]":    {"42"},
+		"AI[1]":            {"42"},
+		"AF[0].I":          {"42"},
+		"SI[9999]":         {"42"},
+		"SF[0000].I":       {"42"},
+		"SSI[9999][9999]":  {"42"},
+		"SSI[0][0]":        {"42"},
+		"ASAI[9][9999][1]": {"42"},
+		"ASAI[0][0][0]":    {"42"},
 	}))
 	t.DeepEqual(d.Decode(&data, url.Values{
 		"AI[2]":             {"42"},
@@ -152,8 +152,8 @@ func TestTooManyValues(tt *testing.T) {
 	}
 	d := NewStrictDecoder()
 	t.Nil(d.Decode(&data, url.Values{
-	// "SAI[42]": {"10", "20"},
-	// "AI": {"10", "20"},
+		"SAI[42]": {"10", "20"},
+		"AI":      {"10", "20"},
 	}))
 	t.DeepEqual(d.Decode(&data, url.Values{
 		"SAI[0]":  {"10", "20", "30"},
@@ -285,6 +285,21 @@ func TestPartial(tt *testing.T) {
 
 	t.Nil(d.Decode(&v.last, url.Values{"I": {"300"}}))
 	t.DeepEqual(v, Data{First: Part{I: 100}, I: 200, last: Part{I: 300}})
+}
+
+func TestSkipEmbedded(tt *testing.T) {
+	t := check.T(tt)
+	type Part struct {
+		I int
+	}
+	type Data struct {
+		Part `form:"-"`
+	}
+	var v Data
+	d := NewStrictDecoder()
+
+	t.Nil(d.Decode(&v, url.Values{"I": {"10"}})) // XXX Is it ok to silently drop value?
+	t.DeepEqual(v, Data{Part: Part{I: 0}})
 }
 
 func BenchmarkSmallFailure(b *testing.B) {

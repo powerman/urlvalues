@@ -142,23 +142,27 @@ func TestParamsPtr(tt *testing.T) {
 		"Z":       &constraint{alias: "Z"},
 	})
 	t.Nil(form.NewDecoder().Decode(&data, url.Values{
-		// "A": {"10"}, // panic
-		// "A[2]":   {"30"}, // panic
+		"A":      {"10"},
+		"A[2]":   {"30"},
 		"I":      {"42"},
 		"M[one]": {"One"},
 		"S":      {"100", "200"},
 		"SS[2]":  {"300"},
 		"Z":      {"zxc"},
 	}))
-	var ival = []int{42, 100, 200, 300}
+	var ival = []int{42, 100, 200, 300, 10, 30}
 	var sval = []string{"One", "zxc"}
+	var aval [3]*int
+	aval[0] = &ival[4]
+	aval[1] = &ival[4] // BUG form #33
+	aval[2] = &ival[5]
 	var s = make([]*int, 2)
 	var ss = make([]*int, 3)
 	s[0] = &ival[1]
 	s[1] = &ival[2]
 	ss[2] = &ival[3]
 	var zref = &sval[1]
-	t.Nil(data.A)
+	t.DeepEqual(data.A, &aval)
 	t.DeepEqual(data.I, &ival[0])
 	t.DeepEqual(data.M, &map[string]*string{"one": &sval[0]})
 	t.DeepEqual(data.S, &s)
@@ -287,21 +291,18 @@ func TestParamsComplex(tt *testing.T) {
 	t.Equal(data.DataC.Z, "one")
 }
 
-// This test is here to improve other tests if/when it'll be fixed.
 func TestDecodeArrayBug29(tt *testing.T) {
 	t := check.T(tt)
 	var data struct {
 		A [2]string
 	}
-	t.Panic(func() {
-		form.NewDecoder().Decode(&data, url.Values{
-			"A":    {"10"},
-			"A[1]": {"20"},
-		})
+	form.NewDecoder().Decode(&data, url.Values{
+		"A":    {"10"},
+		"A[1]": {"20"},
 	})
+	t.DeepEqual(data.A, [2]string{"10", "20"})
 }
 
-// This test is here to improve other tests if/when it'll be fixed.
 func TestDecodeSliceBug30(tt *testing.T) {
 	t := check.T(tt)
 	var data struct {
@@ -319,9 +320,9 @@ func TestDecodeSliceBug30(tt *testing.T) {
 	data.A = nil
 	form.NewDecoder().Decode(&data, url.Values{
 		"A":    {"10"},
-		"A[1]": {"20"},
+		"A[2]": {"20"},
 	})
-	t.NotDeepEqual(data.A, []string{"10", "20"})
+	t.DeepEqual(data.A, []string{"10", "", "20"})
 }
 
 // This test is here to improve other tests if/when it'll be fixed.
@@ -339,4 +340,34 @@ func TestDecodeEmbeddedBug31(tt *testing.T) {
 	}))
 	t.Equal(data.A, "one")
 	t.Equal(data.Embed.A, "one")
+}
+
+// This test is here to improve other tests if/when it'll be fixed.
+func TestDecodeArrayBug33(tt *testing.T) {
+	t := check.T(tt)
+	var data struct {
+		A [3]string
+	}
+	cases := []struct {
+		values url.Values
+		want   [3]string
+	}{
+		{url.Values{"A": {"10"}},
+			[3]string{"10", "", ""}},
+		{url.Values{"A": {"10", "20"}},
+			[3]string{"10", "20", ""}},
+		{url.Values{"A[1]": {"20"}},
+			[3]string{"", "20", ""}},
+		{url.Values{"A": {"10"}, "A[2]": {"30"}},
+			[3]string{"10", "", "30"}},
+	}
+	for n, v := range cases {
+		data.A = [3]string{}
+		form.NewDecoder().Decode(&data, v.values)
+		if n != 2 {
+			t.NotDeepEqual(data.A, v.want)
+		} else {
+			t.DeepEqual(data.A, v.want)
+		}
+	}
 }
