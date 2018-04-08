@@ -15,7 +15,7 @@
 //	    - array with out-of-bound [index]
 //	    - too many params for array field
 //	- error on scalar overflow
-//	  - multiple values for non-slice/array field (except []byte)
+//	  - multiple values for non-slice/array field
 //	  - multiple values for same `array[index]` or `map[key]` (in case this
 //	    array/map doesn't have values of slice/array type)
 //	- error on no values for non-pointer/slice/array field tagged

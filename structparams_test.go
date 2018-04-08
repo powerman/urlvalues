@@ -114,7 +114,8 @@ func TestParamsList(tt *testing.T) {
 		"A[idx]":  &constraint{alias: "A", list: true, cap: []int{3}},
 		"B1":      &constraint{alias: "B1", list: true, cap: []int{5}},
 		"B1[idx]": &constraint{alias: "B1", list: true, cap: []int{5}},
-		"B2":      &constraint{alias: "B2"},
+		"B2":      &constraint{alias: "B2", list: true, cap: []int{10000}},
+		"B2[idx]": &constraint{alias: "B2", list: true, cap: []int{10000}},
 		"S":       &constraint{alias: "S", list: true, cap: []int{10000}},
 		"S[idx]":  &constraint{alias: "S", list: true, cap: []int{10000}},
 	})

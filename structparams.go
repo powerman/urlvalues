@@ -131,7 +131,7 @@ func addElem(opts decoderOpts, typ reflect.Type, required bool, name string, ind
 	case reflect.Array, reflect.Slice:
 		if typ.Kind() == reflect.Array {
 			cap = append(cap, typ.Len())
-		} else if typ.Elem().Kind() != reflect.Uint8 { // exclude []byte
+		} else {
 			cap = append(cap, int(opts.maxArraySize))
 		}
 		if complexElem(typ) {
@@ -144,8 +144,7 @@ func addElem(opts decoderOpts, typ reflect.Type, required bool, name string, ind
 
 	idx := fmt.Sprint(index)
 	if byIndex[idx] == nil {
-		list := typ.Kind() == reflect.Array ||
-			typ.Kind() == reflect.Slice && typ.Elem().Kind() != reflect.Uint8 // exclude []byte
+		list := typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice
 		byIndex[idx] = &constraint{
 			alias:    name,
 			required: required,
