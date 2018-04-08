@@ -59,6 +59,14 @@ func newErrs() Errs { return Errs{Values: make(url.Values)} }
 // This is suitable for debugging but not for production error message.
 func (errs Errs) Error() string { return errs.Encode() }
 
+// Any returns one of available errors or empty string if there are no errors.
+func (errs Errs) Any() (pattern string) {
+	for pattern = range errs.Values {
+		return pattern
+	}
+	return ""
+}
+
 // StrictDecoder wraps https://godoc.org/github.com/go-playground/form#Decoder
 // to add strict validation of url.Values and normalize returned errors.
 //
