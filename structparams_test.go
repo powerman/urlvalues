@@ -154,7 +154,6 @@ func TestParamsPtr(tt *testing.T) {
 	var sval = []string{"One", "zxc"}
 	var aval [3]*int
 	aval[0] = &ival[4]
-	aval[1] = &ival[4] // BUG form #33
 	aval[2] = &ival[5]
 	var s = make([]*int, 2)
 	var ss = make([]*int, 3)
@@ -342,7 +341,6 @@ func TestDecodeEmbeddedBug31(tt *testing.T) {
 	t.Equal(data.Embed.A, "one")
 }
 
-// This test is here to improve other tests if/when it'll be fixed.
 func TestDecodeArrayBug33(tt *testing.T) {
 	t := check.T(tt)
 	var data struct {
@@ -361,13 +359,9 @@ func TestDecodeArrayBug33(tt *testing.T) {
 		{url.Values{"A": {"10"}, "A[2]": {"30"}},
 			[3]string{"10", "", "30"}},
 	}
-	for n, v := range cases {
+	for _, v := range cases {
 		data.A = [3]string{}
 		form.NewDecoder().Decode(&data, v.values)
-		if n != 2 {
-			t.NotDeepEqual(data.A, v.want)
-		} else {
-			t.DeepEqual(data.A, v.want)
-		}
+		t.DeepEqual(data.A, v.want)
 	}
 }
