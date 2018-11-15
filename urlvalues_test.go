@@ -13,10 +13,10 @@ func TestUsage(tt *testing.T) {
 	var v struct{}
 	var i int
 	d := NewStrictDecoder()
-	t.PanicMatch(func() { d.Decode(&v, nil) }, `^data .* nil`)
-	t.PanicMatch(func() { d.Decode(nil, url.Values{}) }, `^v .* non-nil`)
-	t.PanicMatch(func() { d.Decode(v, url.Values{}) }, `^v .* pointer`)
-	t.PanicMatch(func() { d.Decode(&i, url.Values{}) }, `^v .* struct`)
+	t.PanicMatch(func() { _ = d.Decode(&v, nil) }, `^data .* nil`)
+	t.PanicMatch(func() { _ = d.Decode(nil, url.Values{}) }, `^v .* non-nil`)
+	t.PanicMatch(func() { _ = d.Decode(v, url.Values{}) }, `^v .* pointer`)
+	t.PanicMatch(func() { _ = d.Decode(&i, url.Values{}) }, `^v .* struct`)
 }
 
 func TestBadTagForm(tt *testing.T) {
@@ -28,8 +28,8 @@ func TestBadTagForm(tt *testing.T) {
 		S string `form:"s,omitempty,required,wrong"`
 	}
 	d := NewStrictDecoder()
-	t.PanicMatch(func() { d.Decode(&v1, url.Values{}) }, `"wrong" .* "S"`)
-	t.PanicMatch(func() { d.Decode(&v2, url.Values{"s": {""}}) }, `"wrong" .* "S"`)
+	t.PanicMatch(func() { _ = d.Decode(&v1, url.Values{}) }, `"wrong" .* "S"`)
+	t.PanicMatch(func() { _ = d.Decode(&v2, url.Values{"s": {""}}) }, `"wrong" .* "S"`)
 }
 
 func TestEmpty(tt *testing.T) {
@@ -325,7 +325,7 @@ func BenchmarkSmallFailure(b *testing.B) {
 		Age   uint   `validate:"max=130"`
 	}
 	d := NewStrictDecoder()
-	d.Decode(&data, url.Values{})
+	_ = d.Decode(&data, url.Values{})
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if nil == d.Decode(&data, url.Values{
@@ -343,7 +343,7 @@ func BenchmarkSmallSuccess(b *testing.B) {
 		Age   uint   `validate:"max=130"`
 	}
 	d := NewStrictDecoder()
-	d.Decode(&data, url.Values{})
+	_ = d.Decode(&data, url.Values{})
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if nil != d.Decode(&data, url.Values{
@@ -363,7 +363,7 @@ func BenchmarkSmallSuccessLoose(b *testing.B) {
 		Age   uint   `validate:"max=130"`
 	}
 	d := NewStrictDecoder()
-	d.Decode(&data, url.Values{})
+	_ = d.Decode(&data, url.Values{})
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if nil != d.decode(&data, url.Values{
@@ -379,7 +379,7 @@ func BenchmarkSmallSuccessLoose(b *testing.B) {
 func BenchmarkLargeFailure(b *testing.B) {
 	var data DataA
 	d := NewStrictDecoder()
-	d.Decode(&data, url.Values{})
+	_ = d.Decode(&data, url.Values{})
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if nil == d.Decode(&data, url.Values{
@@ -406,7 +406,7 @@ func BenchmarkLargeFailure(b *testing.B) {
 func BenchmarkLargeSuccess(b *testing.B) {
 	var data DataA
 	d := NewStrictDecoder()
-	d.Decode(&data, url.Values{})
+	_ = d.Decode(&data, url.Values{})
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if nil != d.Decode(&data, url.Values{
@@ -434,7 +434,7 @@ func BenchmarkLargeSuccess(b *testing.B) {
 func BenchmarkLargeSuccessLoose(b *testing.B) {
 	var data DataA
 	d := NewStrictDecoder()
-	d.Decode(&data, url.Values{})
+	_ = d.Decode(&data, url.Values{})
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if nil != d.decode(&data, url.Values{

@@ -182,13 +182,14 @@ func (d *StrictDecoder) Decode(v interface{}, values url.Values) error { //nolin
 	case form.DecodeErrors:
 		for field, err := range err {
 			msg := err.Error()
-			if strings.Contains(msg, "Map Key") {
+			switch {
+			case strings.Contains(msg, "Map Key"):
 				panic(err) // wrong v
-			} else if strings.Contains(msg, "SetMaxArraySize") {
+			case strings.Contains(msg, "SetMaxArraySize"):
 				panic(err) // wrong v or MaxArraySize
-			} else if strings.Contains(msg, "Array index") {
+			case strings.Contains(msg, "Array index"):
 				panic(err) // never here (should be handled by validate)
-			} else {
+			default:
 				errs.Add(field, "wrong type")
 			}
 		}

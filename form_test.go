@@ -17,14 +17,14 @@ func TestDecodeMixedIndex(tt *testing.T) {
 	for i := 0; i < 10; i++ { // ensure stable keys order
 		data.A = [5]int{}
 		data.S = []int{}
-		form.NewDecoder().Decode(&data, url.Values{
+		t.Nil(form.NewDecoder().Decode(&data, url.Values{
 			"A":    {"10", "20", "30"},
 			"A[1]": {"200"},
 			"A[4]": {"400"},
 			"S":    {"10", "20", "30"},
 			"S[1]": {"200"},
 			"S[4]": {"400"},
-		})
+		}))
 		t.DeepEqual(data.A, [5]int{10, 200, 30, 0, 400})
 		t.DeepEqual(data.S, []int{10, 200, 30, 0, 400})
 	}
@@ -35,10 +35,10 @@ func TestDecodeArrayBug29(tt *testing.T) {
 	var data struct {
 		A [2]string
 	}
-	form.NewDecoder().Decode(&data, url.Values{
+	t.Nil(form.NewDecoder().Decode(&data, url.Values{
 		"A":    {"10"},
 		"A[1]": {"20"},
-	})
+	}))
 	t.DeepEqual(data.A, [2]string{"10", "20"})
 }
 
@@ -47,20 +47,20 @@ func TestDecodeSliceBug30(tt *testing.T) {
 	var data struct {
 		A []string
 	}
-	form.NewDecoder().Decode(&data, url.Values{
+	t.Nil(form.NewDecoder().Decode(&data, url.Values{
 		"A": {"10"},
-	})
+	}))
 	t.DeepEqual(data.A, []string{"10"})
 	data.A = nil
-	form.NewDecoder().Decode(&data, url.Values{
+	t.Nil(form.NewDecoder().Decode(&data, url.Values{
 		"A[1]": {"20"},
-	})
+	}))
 	t.DeepEqual(data.A, []string{"", "20"})
 	data.A = nil
-	form.NewDecoder().Decode(&data, url.Values{
+	t.Nil(form.NewDecoder().Decode(&data, url.Values{
 		"A":    {"10"},
 		"A[2]": {"20"},
-	})
+	}))
 	t.DeepEqual(data.A, []string{"10", "", "20"})
 }
 
@@ -101,7 +101,7 @@ func TestDecodeArrayBug33(tt *testing.T) {
 	}
 	for _, v := range cases {
 		data.A = [3]string{}
-		form.NewDecoder().Decode(&data, v.values)
+		t.Nil(form.NewDecoder().Decode(&data, v.values))
 		t.DeepEqual(data.A, v.want)
 	}
 }
