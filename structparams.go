@@ -31,7 +31,7 @@ type constraint struct {
 	alias    string // shortest of all aliases
 	required bool   // true for fields tagged `form:",required"`
 	list     bool   // true for array or slice
-	cap      []int  // cap(array) or SetMaxArraySize(10000) for slices
+	maxsize  []int  // maxsize(array) or SetMaxArraySize(10000) for slices
 }
 
 var (
@@ -66,7 +66,7 @@ func paramsForStruct(opts decoderOpts, typ reflect.Type) (params map[string]*con
 // addStruct add given structure's fields to params.
 //
 // Parameters namePfx, idxPfx and byIndex are used internally for recursion only.
-func addStruct(opts decoderOpts, typ reflect.Type, namePfx string, idxPfx, cap []int, byIndex, params map[string]*constraint) { // nolint:gocyclo
+func addStruct(opts decoderOpts, typ reflect.Type, namePfx string, idxPfx, maxsize []int, byIndex, params map[string]*constraint) { // nolint:gocyclo
 	seen := make(map[string]bool, typ.NumField())
 	typ.FieldByNameFunc(func(shortname string) bool {
 		if seen[shortname] { // we'll handle recursion to anon field manually
@@ -102,7 +102,7 @@ func addStruct(opts decoderOpts, typ reflect.Type, namePfx string, idxPfx, cap [
 
 		name := namePfx + shortname
 		index := append(idxPfx, field.Index...)
-		addElem(opts, field.Type, required, name, index, cap, byIndex, params)
+		addElem(opts, field.Type, required, name, index, maxsize, byIndex, params)
 
 		return false
 	})
@@ -111,7 +111,7 @@ func addStruct(opts decoderOpts, typ reflect.Type, namePfx string, idxPfx, cap [
 // addElem add single value of any supported type to params.
 //
 // Parameters name, index and byIndex are used internally for recursion only.
-func addElem(opts decoderOpts, typ reflect.Type, required bool, name string, index, cap []int, byIndex, params map[string]*constraint) { //nolint:gocyclo
+func addElem(opts decoderOpts, typ reflect.Type, required bool, name string, index, maxsize []int, byIndex, params map[string]*constraint) { //nolint:gocyclo
 	for typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
 	}
@@ -119,25 +119,25 @@ func addElem(opts decoderOpts, typ reflect.Type, required bool, name string, ind
 	case reflect.Chan, reflect.Func, reflect.Interface:
 		return
 	case reflect.Struct: // TODO && no custom handler
-		addStruct(opts, typ, name+".", index, cap, byIndex, params)
+		addStruct(opts, typ, name+".", index, maxsize, byIndex, params)
 		return
 	case reflect.Map:
 		name += "[key]"
 		if complexElem(typ) {
 			index = append(index, -1)
-			addElem(opts, typ.Elem(), false, name, index, cap, byIndex, params)
+			addElem(opts, typ.Elem(), false, name, index, maxsize, byIndex, params)
 			return
 		}
 	case reflect.Array, reflect.Slice:
 		if typ.Kind() == reflect.Array {
-			cap = append(cap, typ.Len())
+			maxsize = append(maxsize, typ.Len())
 		} else {
-			cap = append(cap, int(opts.maxArraySize))
+			maxsize = append(maxsize, int(opts.maxArraySize))
 		}
 		if complexElem(typ) {
 			name += "[idx]"
 			index = append(index, -1)
-			addElem(opts, typ.Elem(), false, name, index, cap, byIndex, params)
+			addElem(opts, typ.Elem(), false, name, index, maxsize, byIndex, params)
 			return
 		}
 	}
@@ -149,7 +149,7 @@ func addElem(opts decoderOpts, typ reflect.Type, required bool, name string, ind
 			alias:    name,
 			required: required,
 			list:     list,
-			cap:      cap,
+			maxsize:  maxsize,
 		}
 	} else if len(name) < len(byIndex[idx].alias) || len(name) == len(byIndex[idx].alias) && name < byIndex[idx].alias {
 		byIndex[idx].alias = name

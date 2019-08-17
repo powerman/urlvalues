@@ -252,14 +252,14 @@ func (d *StrictDecoder) validate(typ reflect.Type, values url.Values) Errs { //n
 					if err != nil {
 						panic(err)
 					}
-					if index >= c.cap[i] {
+					if index >= c.maxsize[i] {
 						errs.Add(pattern, "index out-of-bounds")
 					}
 				}
 				if count > 1 {
 					if !list {
 						errs.Add(pattern, "multiple values")
-					} else if count > c.cap[len(c.cap)-1] {
+					} else if count > c.maxsize[len(c.maxsize)-1] {
 						errs.Add(pattern, "too many values")
 					}
 				}
@@ -271,7 +271,7 @@ func (d *StrictDecoder) validate(typ reflect.Type, values url.Values) Errs { //n
 			if count > 1 {
 				if !c.list {
 					errs.Add(pattern, "multiple values")
-				} else if count > c.cap[len(c.cap)-1] {
+				} else if count > c.maxsize[len(c.maxsize)-1] {
 					errs.Add(pattern, "too many values")
 				}
 			}

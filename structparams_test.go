@@ -22,7 +22,7 @@ func TestParamsExported(tt *testing.T) {
 		a string
 	}
 	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
-		"I": &constraint{alias: "I"},
+		"I": {alias: "I"},
 	})
 	t.Nil(form.NewDecoder().Decode(&data, url.Values{
 		"I": {"42"},
@@ -45,8 +45,8 @@ func TestParamsModeExplicit(tt *testing.T) {
 	opts := newDecoderOpts()
 	opts.mode = form.ModeExplicit
 	t.DeepEqual(paramsForStruct(opts, reflect.TypeOf(data)), map[string]*constraint{
-		"b": &constraint{alias: "b"},
-		"Z": &constraint{alias: "Z"},
+		"b": {alias: "b"},
+		"Z": {alias: "Z"},
 	})
 	decoder := form.NewDecoder()
 	decoder.SetMode(opts.mode)
@@ -73,7 +73,7 @@ func TestParamsIgnored(tt *testing.T) {
 		A string `form:"-"`
 	}
 	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
-		"I": &constraint{alias: "I"},
+		"I": {alias: "I"},
 	})
 }
 
@@ -84,8 +84,8 @@ func TestParamsAlias(tt *testing.T) {
 		A string `form:"a"`
 	}
 	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
-		"I": &constraint{alias: "I"},
-		"a": &constraint{alias: "a"},
+		"I": {alias: "I"},
+		"a": {alias: "a"},
 	})
 }
 
@@ -96,8 +96,8 @@ func TestParamsRequired(tt *testing.T) {
 		A string `form:",required"`
 	}
 	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
-		"I": &constraint{alias: "I"},
-		"A": &constraint{alias: "A", required: true},
+		"I": {alias: "I"},
+		"A": {alias: "A", required: true},
 	})
 }
 
@@ -110,14 +110,14 @@ func TestParamsList(tt *testing.T) {
 		S  []int
 	}
 	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
-		"A":       &constraint{alias: "A", list: true, cap: []int{3}},
-		"A[idx]":  &constraint{alias: "A", list: true, cap: []int{3}},
-		"B1":      &constraint{alias: "B1", list: true, cap: []int{5}},
-		"B1[idx]": &constraint{alias: "B1", list: true, cap: []int{5}},
-		"B2":      &constraint{alias: "B2", list: true, cap: []int{10000}},
-		"B2[idx]": &constraint{alias: "B2", list: true, cap: []int{10000}},
-		"S":       &constraint{alias: "S", list: true, cap: []int{10000}},
-		"S[idx]":  &constraint{alias: "S", list: true, cap: []int{10000}},
+		"A":       {alias: "A", list: true, maxsize: []int{3}},
+		"A[idx]":  {alias: "A", list: true, maxsize: []int{3}},
+		"B1":      {alias: "B1", list: true, maxsize: []int{5}},
+		"B1[idx]": {alias: "B1", list: true, maxsize: []int{5}},
+		"B2":      {alias: "B2", list: true, maxsize: []int{10000}},
+		"B2[idx]": {alias: "B2", list: true, maxsize: []int{10000}},
+		"S":       {alias: "S", list: true, maxsize: []int{10000}},
+		"S[idx]":  {alias: "S", list: true, maxsize: []int{10000}},
 	})
 }
 
@@ -132,15 +132,15 @@ func TestParamsPtr(tt *testing.T) {
 		Z  **string
 	}
 	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
-		"A":       &constraint{alias: "A", list: true, cap: []int{3}},
-		"A[idx]":  &constraint{alias: "A", list: true, cap: []int{3}},
-		"I":       &constraint{alias: "I"},
-		"M[key]":  &constraint{alias: "M[key]"},
-		"S":       &constraint{alias: "S", list: true, cap: []int{10000}},
-		"S[idx]":  &constraint{alias: "S", list: true, cap: []int{10000}},
-		"SS":      &constraint{alias: "SS", list: true, cap: []int{10000}},
-		"SS[idx]": &constraint{alias: "SS", list: true, cap: []int{10000}},
-		"Z":       &constraint{alias: "Z"},
+		"A":       {alias: "A", list: true, maxsize: []int{3}},
+		"A[idx]":  {alias: "A", list: true, maxsize: []int{3}},
+		"I":       {alias: "I"},
+		"M[key]":  {alias: "M[key]"},
+		"S":       {alias: "S", list: true, maxsize: []int{10000}},
+		"S[idx]":  {alias: "S", list: true, maxsize: []int{10000}},
+		"SS":      {alias: "SS", list: true, maxsize: []int{10000}},
+		"SS[idx]": {alias: "SS", list: true, maxsize: []int{10000}},
+		"Z":       {alias: "Z"},
 	})
 	t.Nil(form.NewDecoder().Decode(&data, url.Values{
 		"A":      {"10"},
@@ -234,55 +234,55 @@ func TestParamsComplex(tt *testing.T) {
 	t := check.T(tt)
 	var data DataA
 	t.DeepEqual(paramsForStruct(newDecoderOpts(), reflect.TypeOf(data)), map[string]*constraint{
-		"A":                         &constraint{alias: "A"},
-		"Y.I":                       &constraint{alias: "Y.I"},
-		"Y.S":                       &constraint{alias: "Y.S"},
-		"Z":                         &constraint{alias: "Z"},
-		"DataB.B":                   &constraint{alias: "B", required: true},
-		"DataB.M[key]":              &constraint{alias: "M[key]"},
-		"DataB.S1[key].C":           &constraint{alias: "S1[key].C", list: true, cap: []int{10000}},
-		"DataB.S1[key].C[idx]":      &constraint{alias: "S1[key].C", list: true, cap: []int{10000}},
-		"DataB.S1[key].Z":           &constraint{alias: "S1[key].Z"},
-		"DataB.S2[key][idx].C":      &constraint{alias: "S2[key][idx].C", list: true, cap: []int{10000, 10000}},
-		"DataB.S2[key][idx].C[idx]": &constraint{alias: "S2[key][idx].C", list: true, cap: []int{10000, 10000}},
-		"DataB.S2[key][idx].Z":      &constraint{alias: "S2[key][idx].Z", cap: []int{10000}},
-		"DataB.S3[idx].C":           &constraint{alias: "S3[idx].C", list: true, cap: []int{10000, 10000}},
-		"DataB.S3[idx].C[idx]":      &constraint{alias: "S3[idx].C", list: true, cap: []int{10000, 10000}},
-		"DataB.S3[idx].Z":           &constraint{alias: "S3[idx].Z", cap: []int{10000}},
-		"DataB.S4[idx][idx].C":      &constraint{alias: "S4[idx][idx].C", list: true, cap: []int{2, 2, 10000}},
-		"DataB.S4[idx][idx].C[idx]": &constraint{alias: "S4[idx][idx].C", list: true, cap: []int{2, 2, 10000}},
-		"DataB.S4[idx][idx].Z":      &constraint{alias: "S4[idx][idx].Z", cap: []int{2, 2}},
-		"DataB.zz":                  &constraint{alias: "DataB.zz"},
-		"DataB.DataC.C":             &constraint{alias: "DataB.C", list: true, cap: []int{10000}},
-		"DataB.DataC.C[idx]":        &constraint{alias: "DataB.C", list: true, cap: []int{10000}},
-		"DataB.DataC.Z":             &constraint{alias: "DataB.DataC.Z"},
-		"DataB.C":                   &constraint{alias: "DataB.C", list: true, cap: []int{10000}},
-		"DataB.C[idx]":              &constraint{alias: "DataB.C", list: true, cap: []int{10000}},
-		"B":                         &constraint{alias: "B", required: true},
-		"M[key]":                    &constraint{alias: "M[key]"},
-		"S1[key].C":                 &constraint{alias: "S1[key].C", list: true, cap: []int{10000}},
-		"S1[key].C[idx]":            &constraint{alias: "S1[key].C", list: true, cap: []int{10000}},
-		"S1[key].Z":                 &constraint{alias: "S1[key].Z"},
-		"S2[key][idx].C":            &constraint{alias: "S2[key][idx].C", list: true, cap: []int{10000, 10000}},
-		"S2[key][idx].C[idx]":       &constraint{alias: "S2[key][idx].C", list: true, cap: []int{10000, 10000}},
-		"S2[key][idx].Z":            &constraint{alias: "S2[key][idx].Z", cap: []int{10000}},
-		"S3[idx].C":                 &constraint{alias: "S3[idx].C", list: true, cap: []int{10000, 10000}},
-		"S3[idx].C[idx]":            &constraint{alias: "S3[idx].C", list: true, cap: []int{10000, 10000}},
-		"S3[idx].Z":                 &constraint{alias: "S3[idx].Z", cap: []int{10000}},
-		"S4[idx][idx].C":            &constraint{alias: "S4[idx][idx].C", list: true, cap: []int{2, 2, 10000}},
-		"S4[idx][idx].C[idx]":       &constraint{alias: "S4[idx][idx].C", list: true, cap: []int{2, 2, 10000}},
-		"S4[idx][idx].Z":            &constraint{alias: "S4[idx][idx].Z", cap: []int{2, 2}},
-		"DataC.C":                   &constraint{alias: "C", list: true, cap: []int{10000}},
-		"DataC.C[idx]":              &constraint{alias: "C", list: true, cap: []int{10000}},
-		"DataC.Z":                   &constraint{alias: "DataC.Z"},
-		"C":                         &constraint{alias: "C", list: true, cap: []int{10000}},
-		"C[idx]":                    &constraint{alias: "C", list: true, cap: []int{10000}},
+		"A":                         {alias: "A"},
+		"Y.I":                       {alias: "Y.I"},
+		"Y.S":                       {alias: "Y.S"},
+		"Z":                         {alias: "Z"},
+		"DataB.B":                   {alias: "B", required: true},
+		"DataB.M[key]":              {alias: "M[key]"},
+		"DataB.S1[key].C":           {alias: "S1[key].C", list: true, maxsize: []int{10000}},
+		"DataB.S1[key].C[idx]":      {alias: "S1[key].C", list: true, maxsize: []int{10000}},
+		"DataB.S1[key].Z":           {alias: "S1[key].Z"},
+		"DataB.S2[key][idx].C":      {alias: "S2[key][idx].C", list: true, maxsize: []int{10000, 10000}},
+		"DataB.S2[key][idx].C[idx]": {alias: "S2[key][idx].C", list: true, maxsize: []int{10000, 10000}},
+		"DataB.S2[key][idx].Z":      {alias: "S2[key][idx].Z", maxsize: []int{10000}},
+		"DataB.S3[idx].C":           {alias: "S3[idx].C", list: true, maxsize: []int{10000, 10000}},
+		"DataB.S3[idx].C[idx]":      {alias: "S3[idx].C", list: true, maxsize: []int{10000, 10000}},
+		"DataB.S3[idx].Z":           {alias: "S3[idx].Z", maxsize: []int{10000}},
+		"DataB.S4[idx][idx].C":      {alias: "S4[idx][idx].C", list: true, maxsize: []int{2, 2, 10000}},
+		"DataB.S4[idx][idx].C[idx]": {alias: "S4[idx][idx].C", list: true, maxsize: []int{2, 2, 10000}},
+		"DataB.S4[idx][idx].Z":      {alias: "S4[idx][idx].Z", maxsize: []int{2, 2}},
+		"DataB.zz":                  {alias: "DataB.zz"},
+		"DataB.DataC.C":             {alias: "DataB.C", list: true, maxsize: []int{10000}},
+		"DataB.DataC.C[idx]":        {alias: "DataB.C", list: true, maxsize: []int{10000}},
+		"DataB.DataC.Z":             {alias: "DataB.DataC.Z"},
+		"DataB.C":                   {alias: "DataB.C", list: true, maxsize: []int{10000}},
+		"DataB.C[idx]":              {alias: "DataB.C", list: true, maxsize: []int{10000}},
+		"B":                         {alias: "B", required: true},
+		"M[key]":                    {alias: "M[key]"},
+		"S1[key].C":                 {alias: "S1[key].C", list: true, maxsize: []int{10000}},
+		"S1[key].C[idx]":            {alias: "S1[key].C", list: true, maxsize: []int{10000}},
+		"S1[key].Z":                 {alias: "S1[key].Z"},
+		"S2[key][idx].C":            {alias: "S2[key][idx].C", list: true, maxsize: []int{10000, 10000}},
+		"S2[key][idx].C[idx]":       {alias: "S2[key][idx].C", list: true, maxsize: []int{10000, 10000}},
+		"S2[key][idx].Z":            {alias: "S2[key][idx].Z", maxsize: []int{10000}},
+		"S3[idx].C":                 {alias: "S3[idx].C", list: true, maxsize: []int{10000, 10000}},
+		"S3[idx].C[idx]":            {alias: "S3[idx].C", list: true, maxsize: []int{10000, 10000}},
+		"S3[idx].Z":                 {alias: "S3[idx].Z", maxsize: []int{10000}},
+		"S4[idx][idx].C":            {alias: "S4[idx][idx].C", list: true, maxsize: []int{2, 2, 10000}},
+		"S4[idx][idx].C[idx]":       {alias: "S4[idx][idx].C", list: true, maxsize: []int{2, 2, 10000}},
+		"S4[idx][idx].Z":            {alias: "S4[idx][idx].Z", maxsize: []int{2, 2}},
+		"DataC.C":                   {alias: "C", list: true, maxsize: []int{10000}},
+		"DataC.C[idx]":              {alias: "C", list: true, maxsize: []int{10000}},
+		"DataC.Z":                   {alias: "DataC.Z"},
+		"C":                         {alias: "C", list: true, maxsize: []int{10000}},
+		"C[idx]":                    {alias: "C", list: true, maxsize: []int{10000}},
 	})
 	t.Nil(form.NewDecoder().Decode(&data, url.Values{
 		"S2[zero][1].C[2]":      {"three"},
 		"DataB.S2[one][2].C[3]": {"four"},
-		"Z":  {"one"},
-		"zz": {"two"},
+		"Z":                     {"one"},
+		"zz":                    {"two"},
 	}))
 	t.Equal(data.S2["zero"][1].C[2], "three")
 	t.Equal(data.S2["one"][2].C[3], "four")
