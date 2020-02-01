@@ -141,6 +141,7 @@ func IgnoreUnknown() StrictDecoderOption {
 	})
 }
 
+//nolint:gochecknoglobals
 var typTime = reflect.TypeOf(time.Time{})
 
 // Decode will decode values to v (which must be a pointer to a struct).
@@ -210,7 +211,7 @@ func (d *StrictDecoder) decode(v interface{}, values url.Values) (err error) {
 	return d.decoder.Decode(v, values)
 }
 
-func (d *StrictDecoder) validate(typ reflect.Type, values url.Values) Errs { //nolint:gocyclo
+func (d *StrictDecoder) validate(typ reflect.Type, values url.Values) Errs { //nolint:gocyclo,gocognit,funlen
 	errs := newErrs()
 	params := paramsForStruct(d.decoderOpts, typ)
 
@@ -302,6 +303,7 @@ func (d *StrictDecoder) validate(typ reflect.Type, values url.Values) Errs { //n
 	return errs
 }
 
+//nolint:gochecknoglobals
 var (
 	rePatternToken = regexp.MustCompile(`[^\[]+|\[idx\]|\[key\]`)
 	rePattern      = regexp.MustCompile(`\A(` + rePatternToken.String() + `)+\z`)

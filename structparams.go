@@ -34,6 +34,7 @@ type constraint struct {
 	maxsize  []int  // maxsize(array) or SetMaxArraySize(10000) for slices
 }
 
+//nolint:gochecknoglobals
 var (
 	paramsCacheMu sync.Mutex
 	paramsCache   = make(map[decoderOpts]map[reflect.Type]map[string]*constraint)
@@ -111,7 +112,7 @@ func addStruct(opts decoderOpts, typ reflect.Type, namePfx string, idxPfx, maxsi
 // addElem add single value of any supported type to params.
 //
 // Parameters name, index and byIndex are used internally for recursion only.
-func addElem(opts decoderOpts, typ reflect.Type, required bool, name string, index, maxsize []int, byIndex, params map[string]*constraint) { //nolint:gocyclo
+func addElem(opts decoderOpts, typ reflect.Type, required bool, name string, index, maxsize []int, byIndex, params map[string]*constraint) { //nolint:gocyclo,gocognit
 	for typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
 	}
